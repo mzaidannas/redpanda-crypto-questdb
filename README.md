@@ -27,7 +27,7 @@ Start up the Redpanda/QuestDB stack:
 
 ```sh
 cd docker-compose
-docker-compose up -d
+docker-compose up
 ```
 
 Wait until all the components are healthy (look at Kafka Connect container logs).
