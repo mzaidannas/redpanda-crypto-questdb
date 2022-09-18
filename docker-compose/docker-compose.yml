@@ -2,24 +2,22 @@
 version: '3.7'
 volumes:
   redpanda: {}
-  questdb: {}
   connect: {}
+  questdb: {}
+  clickhouse: {}
+  citus: {}
 services:
   redpanda:
     command:
-    - redpanda
-    - start
-    - --smp
-    - '1'
-    - --reserve-memory
-    - 0M
-    - --overprovisioned
-    - --node-id
-    - '0'
-    - --kafka-addr
-    - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
-    - --advertise-kafka-addr
-    - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - redpanda start
+      - --smp 1
+      - --overprovisioned
+      - --reserve-memory 0M
+      - --node-id 0
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr 0.0.0.0:8082
+      - --advertise-pandaproxy-addr localhost:8082
     # NOTE: Please use the latest version here!
     image: docker.vectorized.io/vectorized/redpanda
     container_name: redpanda-1
@@ -27,8 +25,34 @@ services:
     volumes:
       - redpanda:/var/lib/redpanda/data
     ports:
-    - 9092:9092
-    - 29092:29092
+      - 8081:8081
+      - 8082:8082
+      - 9092:9092
+      - 29092:29092
+
+  console:
+    image: docker.redpanda.com/vectorized/console
+    container_name: console
+    hostname: console
+    entrypoint: /bin/sh
+    command: -c "echo \"$$CONSOLE_CONFIG_FILE\" > /tmp/config.yml; /app/console"
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda:29092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://redpanda:8081"]
+        connect:
+          enabled: true
+          clusters:
+            - name: datagen
+              url: http://connect:8083
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redpanda
 
   kafka-connect:
     image: yitaekhwang/cp-kafka-connect-postgres:6.1.0
@@ -54,6 +78,8 @@ services:
       CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
     volumes:
     - connect:/var/lib/kafka/data
+    - ./clickhouse/clickhouse-jdbc.jar:/usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/clickhouse-jdbc.jar
+    - ./clickhouse/clickhouse-jdbc-http.jar:/usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/clickhouse-jdbc-http.jar
 
   questdb:
     image: questdb/questdb
@@ -64,3 +90,38 @@ services:
     ports:
       - "9000:9000" # Web UI
       - "8812:8812" # Postgres Wire Protocol
+
+  clickhouse:
+    image: yandex/clickhouse-server:21.3-alpine
+    hostname: clickhouse
+    container_name: clickhouse
+    environment:
+      CLICKHOUSE_PASSWORD: password
+
+    volumes:
+      - clickhouse:/var/lib/clickhouse
+      - ./clickhouse/clickhouse_postgresql.xml:/etc/clickhouse-server/config.d/postgresql.xml
+    ports:
+      - "8123:8123" # Web UI
+      - "9005:9005" # Postgres Wire Protocol
+
+  citus:
+    image: citusdata/citus:alpine
+    hostname: citus
+    container_name: citus
+    volumes:
+      - citus:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432" # Postgres Port
+
+  citusweb:
+    container_name: citusweb
+    image: sosedoff/pgweb
+    environment:
+      DATABASE_URL: postgres://postgres:password@citus:5432/postgres?sslmode=disable
+    ports:
+      - 8084:8081
+    depends_on:
+      - citus

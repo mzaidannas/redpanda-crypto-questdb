@@ -1,5 +1,5 @@
 {
-  "name": "postgres-sink-eth",
+  "name": "questdb-sink-eth",
   "config": {
     "connector.class":"io.confluent.connect.jdbc.JdbcSinkConnector",
     "tasks.max":"1",
