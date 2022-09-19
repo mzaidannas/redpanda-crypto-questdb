@@ -1,0 +1,24 @@
+{
+  "name": "citus-sink-eth-ma",
+  "config": {
+    "connector.class":"io.confluent.connect.jdbc.JdbcSinkConnector",
+    "tasks.max":"1",
+    "topics": "topic_ETH_ma_25",
+    "table.name.format": "moving_averages",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "connection.url": "jdbc:postgresql://citus:5432/postgres?useSSL=false",
+    "connection.user": "postgres",
+    "connection.password": "password",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "true",
+    "transforms": "TimestampConverter",
+    "transforms.TimestampConverter.type": "org.apache.kafka.connect.transforms.TimestampConverter$Value",
+    "transforms.TimestampConverter.format": "yyyy-MM-dd HH:mm:ss.SSS",
+    "transforms.TimestampConverter.target.type": "Timestamp",
+    "transforms.TimestampConverter.field": "timestamp",
+    "auto.create": "true",
+    "insert.mode": "insert",
+    "pk.mode": "none"
+  }
+}
