@@ -71,7 +71,7 @@ services:
     image: kafka-connect
     build:
        context: .
-       dockerfile: ./docker/kafka-connect/Dockerfile
+       dockerfile: ../docker/kafka-connect/Dockerfile
     hostname: connect
     container_name: connect
     depends_on:

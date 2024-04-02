@@ -1,6 +1,10 @@
 import time, json
 import numpy as np
 import datetime as dt
+import sys
+import six
+
+if sys.version_info >= (3, 12, 0): sys.modules['kafka.vendor.six.moves'] = six.moves
 
 from kafka import KafkaProducer, KafkaConsumer
 from config import config
